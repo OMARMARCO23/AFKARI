@@ -43,12 +43,16 @@ async function analyzeWithGemini(
   });
 
   const data = await res.json();
+  console.log("Gemini raw response:", data);
 
   if (!res.ok) {
     const msg = data?.error?.message || JSON.stringify(data);
-    throw new Error(msg || "Gemini request failed");
+    throw new Error(
+      `Gemini error (${res.status}): ${msg || "Unknown error"}`
+    );
   }
 
+  // Try to collect text from the first candidate
   let textOut = "";
   const parts = data?.candidates?.[0]?.content?.parts || [];
   for (const p of parts) {
@@ -56,15 +60,20 @@ async function analyzeWithGemini(
   }
 
   if (!textOut) {
-    throw new Error("Model returned empty content");
+    // Show the entire raw response if no text content is present
+    throw new Error(
+      "Model returned empty content. Raw response from Gemini: " +
+        JSON.stringify(data)
+    );
   }
 
   let parsed: any;
   try {
     parsed = JSON.parse(textOut);
   } catch {
+    // Model didn't strictly follow the JSON-only instruction
     throw new Error(
-      "Model did not return valid JSON. Try again or rephrase your problem."
+      "Model did not return valid JSON. Raw text: " + textOut
     );
   }
 
@@ -218,7 +227,7 @@ export default function Home() {
               {loading ? "Analyzing..." : "One‑click Analyze"}
             </button>
             {error && (
-              <p className="text-red-600 text-sm mt-2">
+              <p className="text-red-600 text-sm mt-2 whitespace-pre-wrap break-words">
                 {error}
               </p>
             )}
