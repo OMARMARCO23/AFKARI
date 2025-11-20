@@ -146,7 +146,7 @@ export default function Home() {
             )}
             <p className="text-xs text-gray-500 mt-2">
               Privacy: No accounts. Your decisions stay on this device. Only the
-              problem text is sent to the server, which calls Gemini using a
+              problem text is sent to the server, which calls Gemini with a
               server-side API key.
             </p>
           </div>
