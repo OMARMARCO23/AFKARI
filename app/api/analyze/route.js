@@ -1,14 +1,13 @@
 // app/api/analyze/route.js
-export const runtime = "nodejs"; // use Node.js runtime
+export const runtime = "nodejs"; // run on Node.js runtime
 
 import { NextResponse } from "next/server";
 import { buildPrompt, PROMPT_VERSION } from "@/lib/prompt";
 
-const MODEL = "gemini-1.5-flash-latest"; // use the latest 1.5 Flash model
-const API_BASE = "https://generativelanguage.googleapis.com/v1";
+const MODEL = "gemini-1.5-flash"; // use v1 + this model per docs
 
 export async function GET() {
-  // Simple health check
+  // Health check
   return NextResponse.json({
     ok: true,
     message: "Afkari analyze API is working (GET)."
@@ -45,26 +44,26 @@ export async function POST(request) {
     const prompt = buildPrompt(problemText, locale);
     const t0 = Date.now();
 
-    const res = await fetch(
-      `${API_BASE}/models/${MODEL}:generateContent?key=${encodeURIComponent(
-        apiKey
-      )}`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.6,
-            topK: 32,
-            topP: 0.9,
-            maxOutputTokens: 1024
-          }
-        })
-      }
-    );
+    // NOTE: v1 endpoint + gemini-1.5-flash model
+    const url = `https://generativelanguage.googleapis.com/v1/models/${MODEL}:generateContent?key=${encodeURIComponent(
+      apiKey
+    )}`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.6,
+          topK: 32,
+          topP: 0.9,
+          maxOutputTokens: 1024
+        }
+      })
+    });
 
     if (!res.ok) {
       let msg = "AI request failed";
@@ -79,13 +78,11 @@ export async function POST(request) {
 
     const data = await res.json();
 
-    // Collect text from the first candidate
+    // Join all text parts from the first candidate
     let textOut = "";
     const parts = data?.candidates?.[0]?.content?.parts || [];
     for (const p of parts) {
-      if (typeof p.text === "string") {
-        textOut += p.text;
-      }
+      if (typeof p.text === "string") textOut += p.text;
     }
 
     if (!textOut) {
