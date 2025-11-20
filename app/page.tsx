@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { db, saveDecision, listDecisions } from "@/lib/db";
 import type { Decision } from "@/lib/types";
 import { ActionPlan } from "@/components/ActionPlan";
 
-function uid() { return typeof crypto !== "undefined" ? crypto.randomUUID() : Math.random().toString(36).slice(2); }
+function uid() {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+}
 
 export default function Home() {
   const [problemText, setProblemText] = useState("");
@@ -21,7 +25,9 @@ export default function Home() {
     if (all.length && !current) setCurrent(all[0]);
   }
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+  }, []);
 
   async function analyze() {
     setError(null);
@@ -33,13 +39,18 @@ export default function Home() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ problemText, locale })
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed");
+
       const id = uid();
       const now = new Date().toISOString();
       const title = data.goal?.slice(0, 90) || "Decision";
+
       const decision: Decision = {
-        id, createdAt: now, updatedAt: now,
+        id,
+        createdAt: now,
+        updatedAt: now,
         title,
         problemText,
         goal: data.goal || "",
@@ -47,7 +58,12 @@ export default function Home() {
         criteria: data.criteria || [],
         options: data.options || [],
         clarifyingQuestions: data.clarifyingQuestions || [],
-        actionPlan: (data.actionPlan || []).map((s: any) => ({ id: s.id || uid(), text: s.text, done: !!s.done, dueDate: s.dueDate ?? null })),
+        actionPlan: (data.actionPlan || []).map((s: any) => ({
+          id: s.id || uid(),
+          text: s.text,
+          done: !!s.done,
+          dueDate: s.dueDate ?? null
+        })),
         modelInfo: {
           provider: "gemini",
           model: data._meta?.model || "gemini-1.5-flash",
@@ -55,6 +71,7 @@ export default function Home() {
           latencyMs: data._meta?.latencyMs
         }
       };
+
       await saveDecision(decision);
       setCurrent(decision);
       await refresh();
@@ -68,10 +85,15 @@ export default function Home() {
 
   async function exportAll() {
     const all = await db.decisions.toArray();
-    const blob = new Blob([JSON.stringify({ version: "1.0", decisions: all }, null, 2)], { type: "application/json" });
+    const blob = new Blob(
+      [JSON.stringify({ version: "1.0", decisions: all }, null, 2)],
+      { type: "application/json" }
+    );
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "afkari-export.json"; a.click();
+    a.href = url;
+    a.download = "afkari-export.json";
+    a.click();
     URL.revokeObjectURL(url);
   }
 
@@ -80,13 +102,19 @@ export default function Home() {
       <header className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Afkari</h1>
         <div className="flex gap-2 items-center">
-          <select className="border rounded px-2 py-1" value={locale} onChange={e => setLocale(e.target.value)}>
+          <select
+            className="border rounded px-2 py-1"
+            value={locale}
+            onChange={(e) => setLocale(e.target.value)}
+          >
             <option value="en">English</option>
             <option value="ar">العربية</option>
             <option value="fr">Français</option>
             <option value="es">Español</option>
           </select>
-          <button onClick={exportAll} className="border rounded px-3 py-1">Export JSON</button>
+          <button onClick={exportAll} className="border rounded px-3 py-1">
+            Export JSON
+          </button>
         </div>
       </header>
 
@@ -106,27 +134,46 @@ export default function Home() {
             >
               {loading ? "Analyzing..." : "One‑click Analyze"}
             </button>
-            {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
-            <p className="text-xs text-gray-500 mt-2">Privacy: No accounts. Your decisions stay on this device. Only the problem text is sent to the AI, anonymously.</p>
+            {error && (
+              <p className="text-red-600 text-sm mt-2">
+                {error}
+              </p>
+            )}
+            <p className="text-xs text-gray-500 mt-2">
+              Privacy: No accounts. Your decisions stay on this device. Only the
+              problem text is sent to the AI, anonymously.
+            </p>
           </div>
 
           <div className="border rounded p-3">
             <h3 className="font-semibold mb-2">Saved decisions</h3>
             <div className="space-y-2 max-h-72 overflow-auto">
-              {decisions.map(d => (
-                <button key={d.id} className={`w-full text-left p-2 border rounded ${current?.id === d.id ? "bg-gray-100" : ""}`} onClick={() => setCurrent(d)}>
+              {decisions.map((d) => (
+                <button
+                  key={d.id}
+                  className={`w-full text-left p-2 border rounded ${
+                    current?.id === d.id ? "bg-gray-100" : ""
+                  }`}
+                  onClick={() => setCurrent(d)}
+                >
                   <div className="font-medium line-clamp-1">{d.title}</div>
-                  <div className="text-xs text-gray-600">{new Date(d.createdAt).toLocaleString()}</div>
+                  <div className="text-xs text-gray-600">
+                    {new Date(d.createdAt).toLocaleString()}
+                  </div>
                 </button>
               ))}
-              {!decisions.length && <p className="text-sm text-gray-500">No decisions yet.</p>}
+              {!decisions.length && (
+                <p className="text-sm text-gray-500">No decisions yet.</p>
+              )}
             </div>
           </div>
         </div>
 
         <div className="md:col-span-2 space-y-4">
           {!current ? (
-            <div className="text-gray-500">Run an analysis to see your decision framework.</div>
+            <div className="text-gray-500">
+              Run an analysis to see your decision framework.
+            </div>
           ) : (
             <>
               <div className="border rounded p-3">
@@ -137,11 +184,19 @@ export default function Home() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="border rounded p-3">
                   <h3 className="font-semibold mb-2">Constraints</h3>
-                  <ul className="list-disc pl-5 space-y-1">{current.constraints.map((c, i) => <li key={i}>{c}</li>)}</ul>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {current.constraints.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
                 </div>
                 <div className="border rounded p-3">
                   <h3 className="font-semibold mb-2">Evaluation criteria</h3>
-                  <ul className="list-disc pl-5 space-y-1">{current.criteria.map((c, i) => <li key={i}>{c}</li>)}</ul>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {current.criteria.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
                 </div>
               </div>
 
@@ -155,7 +210,11 @@ export default function Home() {
                       {!!o.risks?.length && (
                         <div className="mt-2">
                           <div className="text-sm font-semibold">Risks</div>
-                          <ul className="list-disc pl-5 text-sm">{o.risks.map((r, j) => <li key={j}>{r}</li>)}</ul>
+                          <ul className="list-disc pl-5 text-sm">
+                            {o.risks.map((r, j) => (
+                              <li key={j}>{r}</li>
+                            ))}
+                          </ul>
                         </div>
                       )}
                     </div>
@@ -165,7 +224,11 @@ export default function Home() {
 
               <div className="border rounded p-3">
                 <h3 className="text-lg font-semibold mb-2">Clarifying questions</h3>
-                <ul className="list-disc pl-5 space-y-1">{current.clarifyingQuestions.map((q, i) => <li key={i}>{q}</li>)}</ul>
+                <ul className="list-disc pl-5 space-y-1">
+                  {current.clarifyingQuestions.map((q, i) => (
+                    <li key={i}>{q}</li>
+                  ))}
+                </ul>
               </div>
 
               <div className="border rounded p-3">
@@ -174,7 +237,8 @@ export default function Home() {
               </div>
 
               <div className="text-xs text-gray-500">
-                Model: {current.modelInfo.model} • Generated: {new Date(current.createdAt).toLocaleString()}
+                Model: {current.modelInfo.model} • Generated:{" "}
+                {new Date(current.createdAt).toLocaleString()}
               </div>
             </>
           )}
