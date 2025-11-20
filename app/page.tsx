@@ -4,95 +4,12 @@ import { useEffect, useState } from "react";
 import { db, saveDecision, listDecisions } from "@/lib/db";
 import type { Decision } from "@/lib/types";
 import { ActionPlan } from "@/components/ActionPlan";
-import { buildPrompt } from "@/lib/prompt";
-
-// Use Gemini 2.5 Flash (same family as your Python snippet)
-const MODEL = "gemini-2.5-flash";
 
 // Generate IDs
 function uid() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
-}
-
-// Strip markdown code fences like ```json ... ```
-function cleanJsonText(text: string): string {
-  let cleaned = text.trim();
-  if (cleaned.startsWith("```")) {
-    // Remove leading ``` or ```json
-    cleaned = cleaned.replace(/^```[a-zA-Z]*\s*/, "");
-    // Remove trailing ```
-    cleaned = cleaned.replace(/```$/, "");
-  }
-  return cleaned.trim();
-}
-
-// Call Gemini REST API directly (no /api/analyze)
-async function analyzeWithGemini(
-  problemText: string,
-  locale: string,
-  apiKey: string
-) {
-  const prompt = buildPrompt(problemText, locale);
-
-  const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    `${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.4,
-        topP: 0.9,
-        topK: 40
-        // No maxOutputTokens: let Gemini choose sufficient tokens
-      }
-    })
-  });
-
-  const data = await res.json();
-  console.log("Gemini raw response:", data);
-
-  if (!res.ok) {
-    const msg = data?.error?.message || JSON.stringify(data);
-    throw new Error(
-      `Gemini error (${res.status}): ${msg || "Unknown error"}`
-    );
-  }
-
-  // Collect text from the first candidate
-  let textOut = "";
-  const parts = data?.candidates?.[0]?.content?.parts || [];
-  for (const p of parts) {
-    if (typeof p.text === "string") textOut += p.text;
-  }
-
-  if (!textOut) {
-    // Show raw response for debugging if no text content is present
-    throw new Error(
-      "Model returned empty content. Raw response from Gemini: " +
-        JSON.stringify(data)
-    );
-  }
-
-  // Remove possible ```json ... ``` wrappers
-  const cleaned = cleanJsonText(textOut);
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch {
-    // Model didn't strictly follow the JSON-only instruction
-    throw new Error(
-      "Model did not return valid JSON. Raw text: " + textOut
-    );
-  }
-
-  return parsed;
 }
 
 export default function Home() {
@@ -102,7 +19,6 @@ export default function Home() {
   const [current, setCurrent] = useState<Decision | null>(null);
   const [locale, setLocale] = useState("en");
   const [error, setError] = useState<string | null>(null);
-  const [userKey, setUserKey] = useState("");
 
   async function refresh() {
     const all = await listDecisions();
@@ -114,33 +30,23 @@ export default function Home() {
     refresh();
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = window.localStorage.getItem("afkari.geminiKey");
-      if (stored) setUserKey(stored);
-    }
-  }, []);
-
-  function handleKeyChange(v: string) {
-    setUserKey(v);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("afkari.geminiKey", v.trim());
-    }
-  }
-
   async function analyze() {
     setError(null);
     if (!problemText.trim()) return;
 
-    const key = userKey.trim();
-    if (!key) {
-      setError("Paste your Gemini API key in the field at the top right first.");
-      return;
-    }
-
     setLoading(true);
     try {
-      const data = await analyzeWithGemini(problemText, locale, key);
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ problemText, locale })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || `Request failed (${res.status})`);
+      }
 
       const id = uid();
       const now = new Date().toISOString();
@@ -165,9 +71,9 @@ export default function Home() {
         })),
         modelInfo: {
           provider: "gemini",
-          model: MODEL,
-          promptVersion: "v1.0",
-          latencyMs: undefined
+          model: data._meta?.model || "gemini-2.5-flash",
+          promptVersion: data._meta?.promptVersion || "v1.0",
+          latencyMs: data._meta?.latencyMs
         }
       };
 
@@ -211,14 +117,6 @@ export default function Home() {
             <option value="fr">Français</option>
             <option value="es">Español</option>
           </select>
-          <input
-            type="password"
-            className="border rounded px-2 py-1 w-64"
-            placeholder="Paste your Gemini API key"
-            value={userKey}
-            onChange={(e) => handleKeyChange(e.target.value)}
-            title="Stored only in this browser (localStorage)"
-          />
           <button onClick={exportAll} className="border rounded px-3 py-1">
             Export JSON
           </button>
@@ -248,8 +146,8 @@ export default function Home() {
             )}
             <p className="text-xs text-gray-500 mt-2">
               Privacy: No accounts. Your decisions stay on this device. Only the
-              problem text and your key are sent directly from your browser to
-              Google&apos;s Gemini API.
+              problem text is sent to the server, which calls Gemini using a
+              server-side API key.
             </p>
           </div>
 
