@@ -8,7 +8,66 @@ import { buildPrompt, PROMPT_VERSION } from "@/lib/prompt";
 const API_BASE = "https://generativelanguage.googleapis.com/v1";
 const MODEL = "gemini-pro";
 
-export async function GET() {
+async function callGemini(prompt, apiKey) {
+  const url = `${API_BASE}/models/${MODEL}:generateContent?key=${encodeURIComponent(
+    apiKey
+  )}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.6,
+        topK: 32,
+        topP: 0.9,
+        maxOutputTokens: 1024
+      }
+    })
+  });
+
+  return res;
+}
+
+// GET /api/analyze
+// - Normal: quick health info
+// - Debug: ?debug=1 will actually call Gemini once and show the raw error/result
+export async function GET(request) {
+  const url = new URL(request.url);
+  const debug = url.searchParams.get("debug");
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      { ok: false, error: "Missing GEMINI_API_KEY on server" },
+      { status: 500 }
+    );
+  }
+
+  if (debug === "1") {
+    try {
+      const res = await callGemini("Test prompt from Afkari debug", apiKey);
+      const text = await res.text();
+      return NextResponse.json(
+        {
+          ok: res.ok,
+          status: res.status,
+          raw: text
+        },
+        { status: res.ok ? 200 : 500 }
+      );
+    } catch (e) {
+      return NextResponse.json(
+        { ok: false, error: e?.message || String(e) },
+        { status: 500 }
+      );
+    }
+  }
+
+  // Simple health response
   return NextResponse.json({
     ok: true,
     message: "Afkari analyze API is working (GET).",
@@ -16,6 +75,7 @@ export async function GET() {
   });
 }
 
+// POST /api/analyze  (used by the Analyze button)
 export async function POST(request) {
   try {
     let body = null;
@@ -46,27 +106,8 @@ export async function POST(request) {
     const prompt = buildPrompt(problemText, locale);
     const t0 = Date.now();
 
-    const url = `${API_BASE}/models/${MODEL}:generateContent?key=${encodeURIComponent(
-      apiKey
-    )}`;
+    const res = await callGemini(prompt, apiKey);
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.6,
-          topK: 32,
-          topP: 0.9,
-          maxOutputTokens: 1024
-        }
-      })
-    });
-
-    // If Google returns an error, forward all the details
     if (!res.ok) {
       const text = await res.text();
       return NextResponse.json(
