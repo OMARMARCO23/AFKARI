@@ -6,7 +6,8 @@ import type { Decision } from "@/lib/types";
 import { ActionPlan } from "@/components/ActionPlan";
 import { buildPrompt } from "@/lib/prompt";
 
-const MODEL = "gemini-1.5-flash"; // v1 text model
+// Use the same model as your Python snippet
+const MODEL = "gemini-2.5-flash";
 
 function uid() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -21,9 +22,9 @@ async function analyzeWithGemini(
 ) {
   const prompt = buildPrompt(problemText, locale);
 
-  const url = `https://generativelanguage.googleapis.com/v1/models/${MODEL}:generateContent?key=${encodeURIComponent(
-    apiKey
-  )}`;
+  const url =
+    "https://generativelanguage.googleapis.com/v1/models/" +
+    `${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const res = await fetch(url, {
     method: "POST",
@@ -107,7 +108,7 @@ export default function Home() {
 
     const key = userKey.trim();
     if (!key) {
-      setError("Enter your Gemini API key in the field at the top right first.");
+      setError("Paste your Gemini API key in the field at the top right first.");
       return;
     }
 
