@@ -4,15 +4,16 @@ export const runtime = "nodejs"; // run on Node.js runtime
 import { NextResponse } from "next/server";
 import { buildPrompt, PROMPT_VERSION } from "@/lib/prompt";
 
-// Use the v1beta endpoint + -latest model name
-const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
-const MODEL = "gemini-1.5-flash-latest";
+// Use v1 endpoint + gemini-pro (widely available text model)
+const API_BASE = "https://generativelanguage.googleapis.com/v1";
+const MODEL = "gemini-pro";
 
 export async function GET() {
   // Health check
   return NextResponse.json({
     ok: true,
-    message: "Afkari analyze API is working (GET)."
+    message: "Afkari analyze API is working (GET).",
+    model: MODEL
   });
 }
 
@@ -46,7 +47,6 @@ export async function POST(request) {
     const prompt = buildPrompt(problemText, locale);
     const t0 = Date.now();
 
-    // v1beta + gemini-1.5-flash-latest
     const url = `${API_BASE}/models/${MODEL}:generateContent?key=${encodeURIComponent(
       apiKey
     )}`;
@@ -62,9 +62,7 @@ export async function POST(request) {
           temperature: 0.6,
           topK: 32,
           topP: 0.9,
-          maxOutputTokens: 1024,
-          // REST JSON uses snake_case:
-          response_mime_type: "application/json"
+          maxOutputTokens: 1024
         }
       })
     });
