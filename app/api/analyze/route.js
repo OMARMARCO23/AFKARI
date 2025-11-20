@@ -1,15 +1,14 @@
 // app/api/analyze/route.js
-export const runtime = "nodejs"; // run on Node.js runtime
+export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { buildPrompt, PROMPT_VERSION } from "@/lib/prompt";
 
-// Use v1 endpoint + gemini-pro (widely available text model)
+// Use v1 + gemini-pro (widely available text model)
 const API_BASE = "https://generativelanguage.googleapis.com/v1";
 const MODEL = "gemini-pro";
 
 export async function GET() {
-  // Health check
   return NextResponse.json({
     ok: true,
     message: "Afkari analyze API is working (GET).",
@@ -67,31 +66,30 @@ export async function POST(request) {
       })
     });
 
+    // If Google returns an error, forward all the details
     if (!res.ok) {
-      let msg = "AI request failed";
-      try {
-        const errJson = await res.json();
-        msg = errJson.error?.message || JSON.stringify(errJson);
-      } catch {
-        msg = await res.text();
-      }
-      return NextResponse.json({ error: msg }, { status: 500 });
+      const text = await res.text();
+      return NextResponse.json(
+        {
+          error: "AI request failed",
+          status: res.status,
+          rawError: text
+        },
+        { status: 500 }
+      );
     }
 
     const data = await res.json();
 
-    // Join all text parts from the first candidate
     let textOut = "";
     const parts = data?.candidates?.[0]?.content?.parts || [];
     for (const p of parts) {
-      if (typeof p.text === "string") {
-        textOut += p.text;
-      }
+      if (typeof p.text === "string") textOut += p.text;
     }
 
     if (!textOut) {
       return NextResponse.json(
-        { error: "Model returned empty content" },
+        { error: "Model returned empty content", raw: JSON.stringify(data) },
         { status: 500 }
       );
     }
