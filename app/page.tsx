@@ -6,17 +6,17 @@ import type { Decision } from "@/lib/types";
 import { ActionPlan } from "@/components/ActionPlan";
 import { buildPrompt } from "@/lib/prompt";
 
-// Use the same model family as your Python snippet
+// Use the same family as your Python example
 const MODEL = "gemini-2.5-flash";
 
-// Generate IDs for action steps and decisions
+// Generate IDs
 function uid() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
 }
 
-// Call Gemini REST API directly from the browser
+// Call Gemini REST API directly (no /api/analyze)
 async function analyzeWithGemini(
   problemText: string,
   locale: string,
@@ -24,7 +24,6 @@ async function analyzeWithGemini(
 ) {
   const prompt = buildPrompt(problemText, locale);
 
-  // v1beta + gemini-2.5-flash
   const url =
     "https://generativelanguage.googleapis.com/v1beta/models/" +
     `${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
