@@ -1,15 +1,16 @@
 // app/api/analyze/route.js
+export const runtime = "nodejs"; // force Node.js runtime
+
 import { NextResponse } from "next/server";
 
-// Simple GET handler so you can open /api/analyze in the browser
 export async function GET() {
+  // So you can test in the browser at /api/analyze
   return NextResponse.json({
     ok: true,
     message: "Afkari test API route is working (GET)."
   });
 }
 
-// Simple POST handler used by the Analyze button
 export async function POST(request) {
   let body = null;
   try {
