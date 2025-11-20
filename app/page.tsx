@@ -1,15 +1,3 @@
-
-`JSON.parse` fails on the backticks, so you see: “Model did not return valid JSON. Raw text: ```json { ... } ```”.
-
-We’ll fix this by stripping any ```json / ``` fences before parsing.
-
-Below is a complete, updated `app/page.tsx` with that fix, ready to copy–paste.
-
----
-
-### `app/page.tsx` (full updated file)
-
-```tsx
 "use client";
 
 import { useEffect, useState } from "react";
