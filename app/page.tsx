@@ -1,3 +1,15 @@
+
+`JSON.parse` fails on the backticks, so you see: “Model did not return valid JSON. Raw text: ```json { ... } ```”.
+
+We’ll fix this by stripping any ```json / ``` fences before parsing.
+
+Below is a complete, updated `app/page.tsx` with that fix, ready to copy–paste.
+
+---
+
+### `app/page.tsx` (full updated file)
+
+```tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -14,6 +26,18 @@ function uid() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
+}
+
+// Strip markdown code fences like ```json ... ```
+function cleanJsonText(text: string): string {
+  let cleaned = text.trim();
+  if (cleaned.startsWith("```")) {
+    // Remove leading ``` or ```json
+    cleaned = cleaned.replace(/^```[a-zA-Z]*\s*/, "");
+    // Remove trailing ```
+    cleaned = cleaned.replace(/```$/, "");
+  }
+  return cleaned.trim();
 }
 
 // Call Gemini REST API directly (no /api/analyze)
@@ -37,7 +61,7 @@ async function analyzeWithGemini(
         temperature: 0.4,
         topP: 0.9,
         topK: 40
-        // NOTE: no maxOutputTokens here, let Gemini choose a high default
+        // No maxOutputTokens: let Gemini choose sufficient tokens
       }
     })
   });
@@ -67,9 +91,12 @@ async function analyzeWithGemini(
     );
   }
 
+  // Remove possible ```json ... ``` wrappers
+  const cleaned = cleanJsonText(textOut);
+
   let parsed: any;
   try {
-    parsed = JSON.parse(textOut);
+    parsed = JSON.parse(cleaned);
   } catch {
     // Model didn't strictly follow the JSON-only instruction
     throw new Error(
