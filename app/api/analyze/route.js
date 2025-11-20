@@ -4,7 +4,9 @@ export const runtime = "nodejs"; // run on Node.js runtime
 import { NextResponse } from "next/server";
 import { buildPrompt, PROMPT_VERSION } from "@/lib/prompt";
 
-const MODEL = "gemini-1.5-flash"; // use v1 + this model per docs
+// Use the v1beta endpoint + -latest model name
+const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
+const MODEL = "gemini-1.5-flash-latest";
 
 export async function GET() {
   // Health check
@@ -44,8 +46,8 @@ export async function POST(request) {
     const prompt = buildPrompt(problemText, locale);
     const t0 = Date.now();
 
-    // NOTE: v1 endpoint + gemini-1.5-flash model
-    const url = `https://generativelanguage.googleapis.com/v1/models/${MODEL}:generateContent?key=${encodeURIComponent(
+    // v1beta + gemini-1.5-flash-latest
+    const url = `${API_BASE}/models/${MODEL}:generateContent?key=${encodeURIComponent(
       apiKey
     )}`;
 
@@ -60,7 +62,9 @@ export async function POST(request) {
           temperature: 0.6,
           topK: 32,
           topP: 0.9,
-          maxOutputTokens: 1024
+          maxOutputTokens: 1024,
+          // REST JSON uses snake_case:
+          response_mime_type: "application/json"
         }
       })
     });
@@ -82,7 +86,9 @@ export async function POST(request) {
     let textOut = "";
     const parts = data?.candidates?.[0]?.content?.parts || [];
     for (const p of parts) {
-      if (typeof p.text === "string") textOut += p.text;
+      if (typeof p.text === "string") {
+        textOut += p.text;
+      }
     }
 
     if (!textOut) {
