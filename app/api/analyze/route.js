@@ -6,7 +6,7 @@ import { buildPrompt, PROMPT_VERSION } from "@/lib/prompt";
 
 // Use v1 + gemini-pro (widely available text model)
 const API_BASE = "https://generativelanguage.googleapis.com/v1";
-const MODEL = "gemini-pro";
+const MODEL = "gemini-2.5-flash";
 
 async function callGemini(prompt, apiKey) {
   const url = `${API_BASE}/models/${MODEL}:generateContent?key=${encodeURIComponent(
