@@ -4,11 +4,68 @@ import { useEffect, useState } from "react";
 import { db, saveDecision, listDecisions } from "@/lib/db";
 import type { Decision } from "@/lib/types";
 import { ActionPlan } from "@/components/ActionPlan";
+import { buildPrompt } from "@/lib/prompt";
+
+const MODEL = "gemini-1.5-flash"; // v1 text model
 
 function uid() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
+}
+
+async function analyzeWithGemini(
+  problemText: string,
+  locale: string,
+  apiKey: string
+) {
+  const prompt = buildPrompt(problemText, locale);
+
+  const url = `https://generativelanguage.googleapis.com/v1/models/${MODEL}:generateContent?key=${encodeURIComponent(
+    apiKey
+  )}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.6,
+        topK: 32,
+        topP: 0.9,
+        maxOutputTokens: 1024
+      }
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    const msg = data?.error?.message || JSON.stringify(data);
+    throw new Error(msg || "Gemini request failed");
+  }
+
+  let textOut = "";
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  for (const p of parts) {
+    if (typeof p.text === "string") textOut += p.text;
+  }
+
+  if (!textOut) {
+    throw new Error("Model returned empty content");
+  }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(textOut);
+  } catch {
+    throw new Error(
+      "Model did not return valid JSON. Try again or rephrase your problem."
+    );
+  }
+
+  return parsed;
 }
 
 export default function Home() {
@@ -18,6 +75,7 @@ export default function Home() {
   const [current, setCurrent] = useState<Decision | null>(null);
   const [locale, setLocale] = useState("en");
   const [error, setError] = useState<string | null>(null);
+  const [userKey, setUserKey] = useState("");
 
   async function refresh() {
     const all = await listDecisions();
@@ -29,19 +87,33 @@ export default function Home() {
     refresh();
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem("afkari.geminiKey");
+      if (stored) setUserKey(stored);
+    }
+  }, []);
+
+  function handleKeyChange(v: string) {
+    setUserKey(v);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("afkari.geminiKey", v.trim());
+    }
+  }
+
   async function analyze() {
     setError(null);
     if (!problemText.trim()) return;
+
+    const key = userKey.trim();
+    if (!key) {
+      setError("Enter your Gemini API key in the field at the top right first.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ problemText, locale })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed");
+      const data = await analyzeWithGemini(problemText, locale, key);
 
       const id = uid();
       const now = new Date().toISOString();
@@ -66,9 +138,9 @@ export default function Home() {
         })),
         modelInfo: {
           provider: "gemini",
-          model: data._meta?.model || "gemini-1.5-flash",
-          promptVersion: data._meta?.promptVersion || "v1.0",
-          latencyMs: data._meta?.latencyMs
+          model: MODEL,
+          promptVersion: "v1.0",
+          latencyMs: undefined
         }
       };
 
@@ -99,9 +171,9 @@ export default function Home() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6">
-      <header className="flex items-center justify-between mb-6">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold">Afkari</h1>
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           <select
             className="border rounded px-2 py-1"
             value={locale}
@@ -112,6 +184,14 @@ export default function Home() {
             <option value="fr">Français</option>
             <option value="es">Español</option>
           </select>
+          <input
+            type="password"
+            className="border rounded px-2 py-1 w-64"
+            placeholder="Paste your Gemini API key"
+            value={userKey}
+            onChange={(e) => handleKeyChange(e.target.value)}
+            title="Stored only in this browser (localStorage)"
+          />
           <button onClick={exportAll} className="border rounded px-3 py-1">
             Export JSON
           </button>
@@ -141,7 +221,8 @@ export default function Home() {
             )}
             <p className="text-xs text-gray-500 mt-2">
               Privacy: No accounts. Your decisions stay on this device. Only the
-              problem text is sent to the AI, anonymously.
+              problem text and your key are sent directly from your browser to
+              Google&apos;s Gemini API.
             </p>
           </div>
 
@@ -156,7 +237,7 @@ export default function Home() {
                   }`}
                   onClick={() => setCurrent(d)}
                 >
-                  <div className="font-medium line-clamp-1">{d.title}</div>
+                  <div className="font-medium">{d.title}</div>
                   <div className="text-xs text-gray-600">
                     {new Date(d.createdAt).toLocaleString()}
                   </div>
@@ -206,7 +287,9 @@ export default function Home() {
                   {current.options.map((o, i) => (
                     <div key={i} className="border rounded p-3">
                       <div className="font-medium">{o.title}</div>
-                      <p className="text-sm text-gray-700 mt-1">{o.rationale}</p>
+                      <p className="text-sm text-gray-700 mt-1">
+                        {o.rationale}
+                      </p>
                       {!!o.risks?.length && (
                         <div className="mt-2">
                           <div className="text-sm font-semibold">Risks</div>
@@ -223,7 +306,9 @@ export default function Home() {
               </div>
 
               <div className="border rounded p-3">
-                <h3 className="text-lg font-semibold mb-2">Clarifying questions</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  Clarifying questions
+                </h3>
                 <ul className="list-disc pl-5 space-y-1">
                   {current.clarifyingQuestions.map((q, i) => (
                     <li key={i}>{q}</li>
@@ -233,7 +318,10 @@ export default function Home() {
 
               <div className="border rounded p-3">
                 <h3 className="text-lg font-semibold mb-2">Action plan</h3>
-                <ActionPlan decisionId={current.id} steps={current.actionPlan} />
+                <ActionPlan
+                  decisionId={current.id}
+                  steps={current.actionPlan}
+                />
               </div>
 
               <div className="text-xs text-gray-500">
