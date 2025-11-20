@@ -6,7 +6,7 @@ import type { Decision } from "@/lib/types";
 import { ActionPlan } from "@/components/ActionPlan";
 import { buildPrompt } from "@/lib/prompt";
 
-// Use the same family as your Python example
+// Use Gemini 2.5 Flash (same family as your Python snippet)
 const MODEL = "gemini-2.5-flash";
 
 // Generate IDs
@@ -34,10 +34,10 @@ async function analyzeWithGemini(
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.6,
-        topK: 32,
+        temperature: 0.4,
         topP: 0.9,
-        maxOutputTokens: 1024
+        topK: 40
+        // NOTE: no maxOutputTokens here, let Gemini choose a high default
       }
     })
   });
@@ -52,7 +52,7 @@ async function analyzeWithGemini(
     );
   }
 
-  // Try to collect text from the first candidate
+  // Collect text from the first candidate
   let textOut = "";
   const parts = data?.candidates?.[0]?.content?.parts || [];
   for (const p of parts) {
@@ -60,7 +60,7 @@ async function analyzeWithGemini(
   }
 
   if (!textOut) {
-    // Show the entire raw response if no text content is present
+    // Show raw response for debugging if no text content is present
     throw new Error(
       "Model returned empty content. Raw response from Gemini: " +
         JSON.stringify(data)
