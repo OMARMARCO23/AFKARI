@@ -1,3 +1,4 @@
+// lib/prompt.ts
 export const PROMPT_VERSION = "v1.0";
 
 export const buildPrompt = (problemText: string, locale = "en") => `
