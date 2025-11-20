@@ -14,11 +14,12 @@ const nextConfig = {
           { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com; base-uri 'none'; frame-ancestors 'none';"
-          }
-        ]
-      }
+            value:
+              "default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com; base-uri 'none'; frame-ancestors 'none';",
+          },
+        ],
+      },
     ];
-  }
+  },
 };
 module.exports = nextConfig;
