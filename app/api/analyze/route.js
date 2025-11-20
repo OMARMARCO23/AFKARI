@@ -4,7 +4,8 @@ export const runtime = "nodejs"; // use Node.js runtime
 import { NextResponse } from "next/server";
 import { buildPrompt, PROMPT_VERSION } from "@/lib/prompt";
 
-const MODEL = "gemini-1.5-flash";
+const MODEL = "gemini-1.5-flash-latest"; // use the latest 1.5 Flash model
+const API_BASE = "https://generativelanguage.googleapis.com/v1";
 
 export async function GET() {
   // Simple health check
@@ -45,7 +46,7 @@ export async function POST(request) {
     const t0 = Date.now();
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(
+      `${API_BASE}/models/${MODEL}:generateContent?key=${encodeURIComponent(
         apiKey
       )}`,
       {
@@ -60,14 +61,12 @@ export async function POST(request) {
             topK: 32,
             topP: 0.9,
             maxOutputTokens: 1024
-            // We rely on the prompt to get JSON back; no special responseMimeType needed
           }
         })
       }
     );
 
     if (!res.ok) {
-      // Try to extract useful error info from Gemini
       let msg = "AI request failed";
       try {
         const errJson = await res.json();
@@ -100,7 +99,6 @@ export async function POST(request) {
     try {
       parsed = JSON.parse(textOut);
     } catch {
-      // Model did not follow JSON-only instruction
       return NextResponse.json(
         {
           error: "Model did not return valid JSON",
