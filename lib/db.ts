@@ -28,16 +28,21 @@ export async function getDecision(id: string) {
   return db.decisions.get(id);
 }
 
+// Safely update a step in the (optional) actionPlan.
+// For new decisions (no actionPlan), this just does nothing.
 export async function updateStep(id: string, stepId: string, done: boolean) {
   const dec = await db.decisions.get(id);
-  // actionPlan is optional now; if it's missing, nothing to update
-  if (!dec || !dec.actionPlan) return;
+  if (!dec || !dec.actionPlan || !Array.isArray(dec.actionPlan)) return;
 
-  dec.actionPlan = dec.actionPlan.map((s) =>
-    s.id === stepId ? { ...s, done } : s
-  );
-  dec.updatedAt = new Date().toISOString();
-  await db.decisions.put(dec);
+  const updated: Decision = {
+    ...dec,
+    actionPlan: dec.actionPlan.map((s) =>
+      s.id === stepId ? { ...s, done } : s
+    ),
+    updatedAt: new Date().toISOString()
+  };
+
+  await db.decisions.put(updated);
 }
 
 export async function deleteDecision(id: string) {
