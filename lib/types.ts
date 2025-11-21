@@ -1,7 +1,18 @@
+// lib/types.ts
 export type Option = {
   title: string;
   rationale: string;
   risks: string[];
+  score: number;
+  scoreExplanation: string;
+};
+
+export type Evaluation = {
+  bestOptionTitle: string;
+  bestOptionIndex: number;
+  confidence: number; // 0-100
+  reason: string;
+  summary: string;
 };
 
 export type ActionStep = {
@@ -21,8 +32,10 @@ export type Decision = {
   constraints: string[];
   criteria: string[];
   options: Option[];
-  clarifyingQuestions: string[];
-  actionPlan: ActionStep[];
+  evaluation?: Evaluation;
+  // Legacy / optional fields from earlier versions:
+  clarifyingQuestions?: string[];
+  actionPlan?: ActionStep[];
   modelInfo: {
     provider: "gemini";
     model: string;
