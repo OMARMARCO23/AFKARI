@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { db, saveDecision, listDecisions } from "@/lib/db";
-import type { Decision } from "@/lib/types";
-import { ActionPlan } from "@/components/ActionPlan";
+import type { Decision, Option } from "@/lib/types";
 
 // Generate IDs
 function uid() {
@@ -50,6 +49,41 @@ export default function Home() {
 
       const id = uid();
       const now = new Date().toISOString();
+
+      const options: Option[] = (data.options || []).map((o: any) => ({
+        title: o.title || "Option",
+        rationale: o.rationale || "",
+        risks: Array.isArray(o.risks) ? o.risks : [],
+        score: typeof o.score === "number" ? o.score : 0,
+        scoreExplanation: o.scoreExplanation || ""
+      }));
+
+      const recRaw = data.recommendation || {};
+      const bestIndexRaw =
+        typeof recRaw.bestOptionIndex === "number"
+          ? recRaw.bestOptionIndex
+          : 0;
+      const bestIndex =
+        bestIndexRaw >= 0 && bestIndexRaw < options.length
+          ? bestIndexRaw
+          : 0;
+
+      const evaluation = options.length
+        ? {
+            bestOptionTitle:
+              recRaw.bestOptionTitle ||
+              options[bestIndex]?.title ||
+              "Best option",
+            bestOptionIndex: bestIndex,
+            confidence:
+              typeof recRaw.confidence === "number"
+                ? Math.max(0, Math.min(100, recRaw.confidence))
+                : 0,
+            reason: recRaw.reason || "",
+            summary: recRaw.summary || ""
+          }
+        : undefined;
+
       const title = data.goal?.slice(0, 90) || "Decision";
 
       const decision: Decision = {
@@ -61,18 +95,15 @@ export default function Home() {
         goal: data.goal || "",
         constraints: data.constraints || [],
         criteria: data.criteria || [],
-        options: data.options || [],
+        options,
+        evaluation,
+        // legacy fields left undefined
         clarifyingQuestions: data.clarifyingQuestions || [],
-        actionPlan: (data.actionPlan || []).map((s: any) => ({
-          id: s.id || uid(),
-          text: s.text,
-          done: !!s.done,
-          dueDate: s.dueDate ?? null
-        })),
+        actionPlan: data.actionPlan || [],
         modelInfo: {
           provider: "gemini",
           model: data._meta?.model || "gemini-2.5-flash",
-          promptVersion: data._meta?.promptVersion || "v1.0",
+          promptVersion: data._meta?.promptVersion || "v2.0",
           latencyMs: data._meta?.latencyMs
         }
       };
@@ -111,18 +142,19 @@ export default function Home() {
             <div className="max-w-xl">
               <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900/70 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-slate-700">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                Privacy‑first AI decision coach
+                AI‑assisted decision advisor
               </div>
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                Afkari helps you{" "}
+                Afkari{" "}
                 <span className="bg-gradient-to-r from-emerald-300 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
-                  think through big decisions
-                </span>
+                  scores your options
+                </span>{" "}
+                and highlights the best path.
               </h1>
               <p className="mt-3 max-w-xl text-sm text-slate-200/80 sm:text-base">
-                Describe any decision in your own words. Afkari breaks it into
-                goals, options, trade‑offs, and a concrete action plan—without
-                accounts, tracking, or cloud storage for your data.
+                Describe a decision. Afkari analyzes constraints and criteria,
+                scores each option, and recommends the best one with a clear
+                explanation and confidence level.
               </p>
             </div>
 
@@ -187,8 +219,7 @@ export default function Home() {
                     Describe your decision
                   </h2>
                   <p className="mt-1 text-xs text-slate-300/80">
-                    Be as detailed or brief as you like. Afkari will structure
-                    it for you.
+                    Include your goals, constraints, and what matters most.
                   </p>
                 </div>
                 <select
@@ -205,7 +236,7 @@ export default function Home() {
 
               <textarea
                 className="h-40 w-full resize-none rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 outline-none ring-0 placeholder:text-slate-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400"
-                placeholder="Example: I'm deciding whether to accept a job offer in another city versus staying in my current role..."
+                placeholder="Example: I'm deciding whether to accept a remote job offer with higher pay but less stability, or stay in my current role..."
                 value={problemText}
                 onChange={(e) => setProblemText(e.target.value)}
               />
@@ -218,7 +249,7 @@ export default function Home() {
                 {loading ? (
                   <>
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
-                    Analyzing your decision…
+                    Analyzing your options…
                   </>
                 ) : (
                   <>
@@ -306,7 +337,7 @@ export default function Home() {
                   <span className="font-medium text-emerald-300">
                     One‑click Analyze
                   </span>{" "}
-                  to see a structured breakdown here.
+                  to see scores and recommendations here.
                 </p>
               </div>
             ) : (
@@ -318,6 +349,46 @@ export default function Home() {
                   </h2>
                   <p className="mt-1 text-sm text-slate-100">{current.goal}</p>
                 </div>
+
+                {/* Recommendation */}
+                {current.evaluation && (
+                  <div className="rounded-2xl border border-emerald-500/60 bg-emerald-500/10 p-4 shadow-md shadow-emerald-500/30">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
+                          AI recommendation
+                        </h3>
+                        <p className="mt-1 text-sm font-semibold text-emerald-50">
+                          Best option:{" "}
+                          <span className="font-bold">
+                            {current.evaluation.bestOptionTitle}
+                          </span>
+                        </p>
+                        {current.evaluation.summary && (
+                          <p className="mt-1 text-xs text-emerald-100/90">
+                            {current.evaluation.summary}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col items-end text-right">
+                          <span className="text-[10px] uppercase tracking-[0.16em] text-emerald-200">
+                            Confidence
+                          </span>
+                          <span className="text-2xl font-bold text-emerald-100">
+                            {Math.round(current.evaluation.confidence)}
+                            <span className="text-sm">%</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {current.evaluation.reason && (
+                      <p className="mt-2 text-xs text-emerald-100/90">
+                        {current.evaluation.reason}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Constraints & criteria */}
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -350,78 +421,99 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Options */}
+                {/* Options with scores */}
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-md shadow-black/30">
                   <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Options
-                  </h3>
-                  <div className="mt-3 space-y-3">
-                    {current.options.map((o, i) => (
-                      <div
-                        key={i}
-                        className="rounded-xl border border-slate-800 bg-slate-950/60 p-3"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h4 className="text-sm font-semibold text-slate-100">
-                              {o.title}
-                            </h4>
-                            <p className="mt-1 text-xs text-slate-300">
-                              {o.rationale}
-                            </p>
-                          </div>
-                          <span className="mt-0.5 shrink-0 rounded-full bg-slate-900 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-slate-400">
-                            Option {i + 1}
-                          </span>
-                        </div>
-                        {!!o.risks?.length && (
-                          <div className="mt-2 rounded-lg bg-slate-900/80 p-2">
-                            <div className="text-[11px] font-semibold text-rose-300">
-                              Risks
-                            </div>
-                            <ul className="mt-1 space-y-0.5 text-[11px] text-slate-200">
-                              {o.risks.map((r, j) => (
-                                <li key={j} className="flex gap-1.5">
-                                  <span className="mt-[3px] inline-block h-1.5 w-1.5 rounded-full bg-rose-400/80" />
-                                  <span>{r}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Clarifying questions */}
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-md shadow-black/30">
-                  <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Clarifying questions
-                  </h3>
-                  <ul className="mt-2 space-y-1.5 text-xs text-slate-100">
-                    {current.clarifyingQuestions.map((q, i) => (
-                      <li key={i} className="flex gap-1.5">
-                        <span className="mt-[3px] inline-block h-1.5 w-1.5 rounded-full bg-amber-400/80" />
-                        <span>{q}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Action plan */}
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-md shadow-black/30">
-                  <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Action plan
+                    Options & scores
                   </h3>
                   <p className="mt-1 text-[11px] text-slate-400">
-                    Mark steps as complete as you move forward.
+                    Higher scores mean a better overall fit based on your
+                    constraints and criteria.
                   </p>
-                  <div className="mt-2">
-                    <ActionPlan
-                      decisionId={current.id}
-                      steps={current.actionPlan}
-                    />
+                  <div className="mt-3 space-y-3">
+                    {current.options.map((o, i) => {
+                      const isBest =
+                        current.evaluation &&
+                        current.evaluation.bestOptionIndex === i;
+                      const score =
+                        typeof o.score === "number" ? o.score : 0;
+                      const clampedScore = Math.max(
+                        0,
+                        Math.min(100, score)
+                      );
+                      return (
+                        <div
+                          key={i}
+                          className={`rounded-xl border p-3 transition ${
+                            isBest
+                              ? "border-emerald-400/80 bg-emerald-500/5 shadow-md shadow-emerald-500/20"
+                              : "border-slate-800 bg-slate-950/60 hover:border-slate-700 hover:bg-slate-900"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-semibold text-slate-100">
+                                  {o.title}
+                                </h4>
+                                {isBest && (
+                                  <span className="rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-semibold text-slate-950">
+                                    Recommended
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-1 text-xs text-slate-300">
+                                {o.rationale}
+                              </p>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <span className="text-[10px] uppercase tracking-[0.16em] text-slate-400">
+                                Score
+                              </span>
+                              <div className="text-lg font-bold text-slate-50">
+                                {Math.round(clampedScore)}
+                                <span className="text-xs text-slate-300">
+                                  /100
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                            <div
+                              className={`h-full rounded-full ${
+                                isBest
+                                  ? "bg-gradient-to-r from-emerald-400 to-sky-400"
+                                  : "bg-slate-500"
+                              }`}
+                              style={{ width: `${clampedScore}%` }}
+                            />
+                          </div>
+                          {o.scoreExplanation && (
+                            <p className="mt-1 text-[11px] text-slate-300">
+                              {o.scoreExplanation}
+                            </p>
+                          )}
+                          {!!o.risks?.length && (
+                            <div className="mt-2 rounded-lg bg-slate-900/80 p-2">
+                              <div className="text-[11px] font-semibold text-rose-300">
+                                Risks
+                              </div>
+                              <ul className="mt-1 space-y-0.5 text-[11px] text-slate-200">
+                                {o.risks.map((r, j) => (
+                                  <li
+                                    key={j}
+                                    className="flex gap-1.5"
+                                  >
+                                    <span className="mt-[3px] inline-block h-1.5 w-1.5 rounded-full bg-rose-400/80" />
+                                    <span>{r}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
