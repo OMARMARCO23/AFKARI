@@ -103,160 +103,340 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6">
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <h1 className="text-2xl font-bold">Afkari</h1>
-        <div className="flex flex-wrap gap-2 items-center">
-          <select
-            className="border rounded px-2 py-1"
-            value={locale}
-            onChange={(e) => setLocale(e.target.value)}
-          >
-            <option value="en">English</option>
-            <option value="ar">العربية</option>
-            <option value="fr">Français</option>
-            <option value="es">Español</option>
-          </select>
-          <button onClick={exportAll} className="border rounded px-3 py-1">
-            Export JSON
-          </button>
-        </div>
-      </header>
-
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 space-y-4">
-          <div className="border rounded p-3">
-            <textarea
-              className="w-full h-36 p-2 border rounded"
-              placeholder="Describe your decision/problem in plain text..."
-              value={problemText}
-              onChange={(e) => setProblemText(e.target.value)}
-            />
-            <button
-              className="mt-3 w-full bg-black text-white rounded py-2 disabled:opacity-60"
-              onClick={analyze}
-              disabled={loading || !problemText.trim()}
-            >
-              {loading ? "Analyzing..." : "One‑click Analyze"}
-            </button>
-            {error && (
-              <p className="text-red-600 text-sm mt-2 whitespace-pre-wrap break-words">
-                {error}
+    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-50">
+      <div className="mx-auto flex max-w-6xl flex-col px-4 py-8 sm:px-6 sm:py-10 lg:py-14">
+        {/* Header / Hero */}
+        <div className="relative mb-8 overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-r from-indigo-500/20 via-emerald-500/10 to-sky-500/20 p-6 shadow-xl shadow-black/40 sm:p-8">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-xl">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900/70 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-slate-700">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Privacy‑first AI decision coach
+              </div>
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                Afkari helps you{" "}
+                <span className="bg-gradient-to-r from-emerald-300 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
+                  think through big decisions
+                </span>
+              </h1>
+              <p className="mt-3 max-w-xl text-sm text-slate-200/80 sm:text-base">
+                Describe any decision in your own words. Afkari breaks it into
+                goals, options, trade‑offs, and a concrete action plan—without
+                accounts, tracking, or cloud storage for your data.
               </p>
-            )}
-            <p className="text-xs text-gray-500 mt-2">
-              Privacy: No accounts. Your decisions stay on this device. Only the
-              problem text is sent to the server, which calls Gemini with a
-              server-side API key.
-            </p>
-          </div>
+            </div>
 
-          <div className="border rounded p-3">
-            <h3 className="font-semibold mb-2">Saved decisions</h3>
-            <div className="space-y-2 max-h-72 overflow-auto">
-              {decisions.map((d) => (
-                <button
-                  key={d.id}
-                  className={`w-full text-left p-2 border rounded ${
-                    current?.id === d.id ? "bg-gray-100" : ""
-                  }`}
-                  onClick={() => setCurrent(d)}
+            {/* Simple abstract graphic */}
+            <div className="pointer-events-none relative mt-4 h-28 w-full max-w-xs self-end md:mt-0">
+              <div className="absolute -right-4 -top-6 h-28 w-28 rounded-full bg-emerald-400/20 blur-2xl" />
+              <div className="absolute -bottom-6 -left-10 h-32 w-32 rounded-full bg-indigo-500/20 blur-2xl" />
+              <div className="relative flex h-full w-full items-center justify-center rounded-2xl border border-slate-700/70 bg-slate-900/60 backdrop-blur-xl">
+                <svg
+                  viewBox="0 0 120 120"
+                  className="h-16 w-16 text-emerald-300/90"
                 >
-                  <div className="font-medium">{d.title}</div>
-                  <div className="text-xs text-gray-600">
-                    {new Date(d.createdAt).toLocaleString()}
-                  </div>
-                </button>
-              ))}
-              {!decisions.length && (
-                <p className="text-sm text-gray-500">No decisions yet.</p>
-              )}
+                  <defs>
+                    <linearGradient
+                      id="afkariGradient"
+                      x1="0"
+                      y1="0"
+                      x2="1"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor="#34d399" />
+                      <stop offset="50%" stopColor="#22d3ee" />
+                      <stop offset="100%" stopColor="#6366f1" />
+                    </linearGradient>
+                  </defs>
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="32"
+                    fill="none"
+                    stroke="url(#afkariGradient)"
+                    strokeWidth="7"
+                    strokeDasharray="12 10"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M40 72 L54 52 L68 64 L82 44"
+                    fill="none"
+                    stroke="url(#afkariGradient)"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="54" cy="52" r="3" fill="#22c55e" />
+                  <circle cx="68" cy="64" r="3" fill="#0ea5e9" />
+                  <circle cx="82" cy="44" r="3" fill="#a855f7" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="md:col-span-2 space-y-4">
-          {!current ? (
-            <div className="text-gray-500">
-              Run an analysis to see your decision framework.
+        {/* Main layout */}
+        <section className="grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.7fr)] items-start">
+          {/* Left column: input + saved decisions */}
+          <div className="space-y-5">
+            {/* Input card */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg shadow-black/40 sm:p-5">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Describe your decision
+                  </h2>
+                  <p className="mt-1 text-xs text-slate-300/80">
+                    Be as detailed or brief as you like. Afkari will structure
+                    it for you.
+                  </p>
+                </div>
+                <select
+                  className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 shadow-sm outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400"
+                  value={locale}
+                  onChange={(e) => setLocale(e.target.value)}
+                >
+                  <option value="en">English</option>
+                  <option value="ar">العربية</option>
+                  <option value="fr">Français</option>
+                  <option value="es">Español</option>
+                </select>
+              </div>
+
+              <textarea
+                className="h-40 w-full resize-none rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 outline-none ring-0 placeholder:text-slate-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400"
+                placeholder="Example: I'm deciding whether to accept a job offer in another city versus staying in my current role..."
+                value={problemText}
+                onChange={(e) => setProblemText(e.target.value)}
+              />
+
+              <button
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:from-emerald-400 hover:to-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={analyze}
+                disabled={loading || !problemText.trim()}
+              >
+                {loading ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
+                    Analyzing your decision…
+                  </>
+                ) : (
+                  <>
+                    <span className="inline-block h-2 w-2 rounded-full bg-emerald-300" />
+                    One‑click Analyze
+                  </>
+                )}
+              </button>
+
+              {error && (
+                <p className="mt-2 rounded-lg border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-200 whitespace-pre-wrap break-words">
+                  {error}
+                </p>
+              )}
+
+              <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+                <span className="font-semibold text-slate-200">
+                  Privacy:
+                </span>{" "}
+                No accounts. Your decisions stay on this device (IndexedDB).
+                Only the problem text is sent to the Afkari server, which calls
+                Gemini with a server‑side API key. No analytics, no tracking.
+              </p>
             </div>
-          ) : (
-            <>
-              <div className="border rounded p-3">
-                <h2 className="text-xl font-semibold mb-2">Goal</h2>
-                <p>{current.goal}</p>
-              </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="border rounded p-3">
-                  <h3 className="font-semibold mb-2">Constraints</h3>
-                  <ul className="list-disc pl-5 space-y-1">
-                    {current.constraints.map((c, i) => (
-                      <li key={i}>{c}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="border rounded p-3">
-                  <h3 className="font-semibold mb-2">Evaluation criteria</h3>
-                  <ul className="list-disc pl-5 space-y-1">
-                    {current.criteria.map((c, i) => (
-                      <li key={i}>{c}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              <div className="border rounded p-3">
-                <h3 className="text-lg font-semibold mb-2">Options</h3>
-                <div className="space-y-3">
-                  {current.options.map((o, i) => (
-                    <div key={i} className="border rounded p-3">
-                      <div className="font-medium">{o.title}</div>
-                      <p className="text-sm text-gray-700 mt-1">
-                        {o.rationale}
-                      </p>
-                      {!!o.risks?.length && (
-                        <div className="mt-2">
-                          <div className="text-sm font-semibold">Risks</div>
-                          <ul className="list-disc pl-5 text-sm">
-                            {o.risks.map((r, j) => (
-                              <li key={j}>{r}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border rounded p-3">
-                <h3 className="text-lg font-semibold mb-2">
-                  Clarifying questions
+            {/* Saved decisions */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-lg shadow-black/40">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-slate-100">
+                  Saved decisions
                 </h3>
-                <ul className="list-disc pl-5 space-y-1">
-                  {current.clarifyingQuestions.map((q, i) => (
-                    <li key={i}>{q}</li>
-                  ))}
-                </ul>
+                <button
+                  onClick={exportAll}
+                  className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-slate-100 shadow-sm transition hover:border-emerald-400 hover:text-emerald-200"
+                >
+                  Export JSON
+                </button>
               </div>
+              <div className="space-y-2 max-h-72 overflow-auto pr-1">
+                {decisions.map((d) => (
+                  <button
+                    key={d.id}
+                    className={`flex w-full flex-col rounded-xl border px-3 py-2 text-left text-xs transition ${
+                      current?.id === d.id
+                        ? "border-emerald-400/70 bg-emerald-500/5"
+                        : "border-slate-800/80 bg-slate-950/40 hover:border-slate-600/80 hover:bg-slate-900"
+                    }`}
+                    onClick={() => setCurrent(d)}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="line-clamp-1 font-medium text-slate-100">
+                        {d.title}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-slate-400">
+                        {new Date(d.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <span className="mt-0.5 line-clamp-2 text-[11px] text-slate-400">
+                      {d.problemText}
+                    </span>
+                  </button>
+                ))}
+                {!decisions.length && (
+                  <p className="text-xs text-slate-500">
+                    You haven&apos;t saved any decisions yet. Run your first
+                    analysis to get started.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
 
-              <div className="border rounded p-3">
-                <h3 className="text-lg font-semibold mb-2">Action plan</h3>
-                <ActionPlan
-                  decisionId={current.id}
-                  steps={current.actionPlan}
-                />
+          {/* Right column: analysis output */}
+          <div className="space-y-4">
+            {!current ? (
+              <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 p-6 text-center text-slate-400">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900">
+                  <span className="text-xl">🧠</span>
+                </div>
+                <h2 className="text-sm font-semibold text-slate-100">
+                  No decision selected yet
+                </h2>
+                <p className="mt-1 text-xs text-slate-400">
+                  Describe a decision on the left and click{" "}
+                  <span className="font-medium text-emerald-300">
+                    One‑click Analyze
+                  </span>{" "}
+                  to see a structured breakdown here.
+                </p>
               </div>
+            ) : (
+              <>
+                {/* Goal */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-md shadow-black/30">
+                  <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Goal
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-100">{current.goal}</p>
+                </div>
 
-              <div className="text-xs text-gray-500">
-                Model: {current.modelInfo.model} • Generated:{" "}
-                {new Date(current.createdAt).toLocaleString()}
-              </div>
-            </>
-          )}
-        </div>
-      </section>
-    </div>
+                {/* Constraints & criteria */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-md shadow-black/20">
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Constraints
+                    </h3>
+                    <ul className="mt-2 space-y-1.5 text-xs text-slate-100">
+                      {current.constraints.map((c, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
+                          <span>{c}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-md shadow-black/20">
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Evaluation criteria
+                    </h3>
+                    <ul className="mt-2 space-y-1.5 text-xs text-slate-100">
+                      {current.criteria.map((c, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-sky-400/80" />
+                          <span>{c}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Options */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-md shadow-black/30">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Options
+                  </h3>
+                  <div className="mt-3 space-y-3">
+                    {current.options.map((o, i) => (
+                      <div
+                        key={i}
+                        className="rounded-xl border border-slate-800 bg-slate-950/60 p-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h4 className="text-sm font-semibold text-slate-100">
+                              {o.title}
+                            </h4>
+                            <p className="mt-1 text-xs text-slate-300">
+                              {o.rationale}
+                            </p>
+                          </div>
+                          <span className="mt-0.5 shrink-0 rounded-full bg-slate-900 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-slate-400">
+                            Option {i + 1}
+                          </span>
+                        </div>
+                        {!!o.risks?.length && (
+                          <div className="mt-2 rounded-lg bg-slate-900/80 p-2">
+                            <div className="text-[11px] font-semibold text-rose-300">
+                              Risks
+                            </div>
+                            <ul className="mt-1 space-y-0.5 text-[11px] text-slate-200">
+                              {o.risks.map((r, j) => (
+                                <li key={j} className="flex gap-1.5">
+                                  <span className="mt-[3px] inline-block h-1.5 w-1.5 rounded-full bg-rose-400/80" />
+                                  <span>{r}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Clarifying questions */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-md shadow-black/30">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Clarifying questions
+                  </h3>
+                  <ul className="mt-2 space-y-1.5 text-xs text-slate-100">
+                    {current.clarifyingQuestions.map((q, i) => (
+                      <li key={i} className="flex gap-1.5">
+                        <span className="mt-[3px] inline-block h-1.5 w-1.5 rounded-full bg-amber-400/80" />
+                        <span>{q}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Action plan */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-md shadow-black/30">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Action plan
+                  </h3>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Mark steps as complete as you move forward.
+                  </p>
+                  <div className="mt-2">
+                    <ActionPlan
+                      decisionId={current.id}
+                      steps={current.actionPlan}
+                    />
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-slate-500">
+                  Model: {current.modelInfo.model} • Generated:{" "}
+                  {new Date(current.createdAt).toLocaleString()}
+                  {typeof current.modelInfo.latencyMs === "number" && (
+                    <> • Latency: {current.modelInfo.latencyMs} ms</>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
