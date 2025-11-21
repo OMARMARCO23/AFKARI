@@ -1,3 +1,4 @@
+// lib/db.ts
 import Dexie, { Table } from "dexie";
 import type { Decision } from "./types";
 
@@ -29,8 +30,12 @@ export async function getDecision(id: string) {
 
 export async function updateStep(id: string, stepId: string, done: boolean) {
   const dec = await db.decisions.get(id);
-  if (!dec) return;
-  dec.actionPlan = dec.actionPlan.map(s => s.id === stepId ? { ...s, done } : s);
+  // actionPlan is optional now; if it's missing, nothing to update
+  if (!dec || !dec.actionPlan) return;
+
+  dec.actionPlan = dec.actionPlan.map((s) =>
+    s.id === stepId ? { ...s, done } : s
+  );
   dec.updatedAt = new Date().toISOString();
   await db.decisions.put(dec);
 }
